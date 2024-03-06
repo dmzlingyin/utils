@@ -37,10 +37,10 @@ func New(level int, writers ...io.Writer) Logger {
 	}
 
 	return &defaultLogger{
-		debugLogger: log.New(w, "[debug]: ", log.Ldate|log.Ltime),
-		infoLogger:  log.New(w, "[info]: ", log.Ldate|log.Ltime),
-		warnLogger:  log.New(w, "[warn]: ", log.Ldate|log.Ltime),
-		errorLogger: log.New(w, "[error]: ", log.Ldate|log.Ltime),
+		debugLogger: log.New(w, "[Debug]: ", log.Ldate|log.Ltime),
+		infoLogger:  log.New(w, "[Info]: ", log.Ldate|log.Ltime),
+		warnLogger:  log.New(w, "[Warn]: ", log.Ldate|log.Ltime),
+		errorLogger: log.New(w, "[Error]: ", log.Ldate|log.Ltime),
 		level:       level,
 	}
 }
