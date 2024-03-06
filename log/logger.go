@@ -25,17 +25,15 @@ type Logger interface {
 	SetLevel(lvl int)
 }
 
-// default variable logger
+// default logger
 var logger = New(LevelDebug)
 
 func New(level int, writers ...io.Writer) Logger {
-	var w io.Writer
+	var w io.Writer = os.Stdout
 	if len(writers) > 0 {
 		if v := writers[0]; v != nil {
 			w = v
 		}
-	} else {
-		w = os.Stdout
 	}
 
 	return &defaultLogger{
