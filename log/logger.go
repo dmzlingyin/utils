@@ -29,7 +29,7 @@ type Logger interface {
 var logger = New(LevelDebug)
 
 func New(level int, writers ...io.Writer) Logger {
-	var w io.Writer = os.Stdout
+	var w io.Writer = os.Stderr
 	if len(writers) > 0 {
 		if v := writers[0]; v != nil {
 			w = v
