@@ -6,8 +6,12 @@ func Put(builder any, name string) {
 	global.Put(builder, name)
 }
 
-func Find() {
-	global.Find()
+func Find(name string) any {
+	return global.Find(name)
+}
+
+func TryFind(name string) (any, error) {
+	return global.TryFind(name)
 }
 
 func Call() {
