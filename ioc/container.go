@@ -63,8 +63,7 @@ func (c *Container) Call() {}
 func (c *Container) call(t reflect.Type, v reflect.Value) ([]reflect.Value, error) {
 	args := make([]reflect.Value, t.NumIn())
 	for i := range args {
-		argType := t.In(i)
-		svc, err := c.get(argType)
+		svc, err := c.get(t.In(i))
 		if err != nil {
 			return nil, err
 		}
