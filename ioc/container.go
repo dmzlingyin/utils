@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/dmzlingyin/utils/lazy"
 )
 
@@ -58,7 +59,24 @@ func (c *Container) TryFind(name string) (any, error) {
 	return nil, errors.New("not regeistered instance: " + name)
 }
 
-func (c *Container) Call() {}
+func (c *Container) Call(f any) error {
+	t := reflect.TypeOf(f)
+	v := reflect.ValueOf(f)
+	if t.Kind() != reflect.Func || v.IsNil() {
+		return errors.New("parameter f is not a valid function")
+	}
+
+	res, err := c.call(t, v)
+	if err != nil {
+		return err
+	}
+	if len(res) > 0 {
+		if res[0].Type() == reflects.TypeError && !res[0].IsNil() {
+			return res[0].Interface().(error)
+		}
+	}
+	return nil
+}
 
 func (c *Container) call(t reflect.Type, v reflect.Value) ([]reflect.Value, error) {
 	args := make([]reflect.Value, t.NumIn())
@@ -79,7 +97,17 @@ func (c *Container) get(t reflect.Type) (any, error) {
 	return nil, errors.New("cannot get service: " + t.Name())
 }
 
-func (c *Container) Range() {}
+func (c *Container) Range(f func(name string, ins any) bool) {
+	for n, i := range c.instances {
+		res, err := i.build(c)
+		if err != nil {
+			panic(err)
+		}
+		if !f(n, res) {
+			return
+		}
+	}
+}
 
 type instance struct {
 	t     reflect.Type

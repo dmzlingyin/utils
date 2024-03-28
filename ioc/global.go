@@ -14,10 +14,10 @@ func TryFind(name string) (any, error) {
 	return global.TryFind(name)
 }
 
-func Call() {
-	global.Call()
+func Call(f any) error {
+	return global.Call(f)
 }
 
-func Range() {
-	global.Range()
+func Range(f func(name string, ins any) bool) {
+	global.Range(f)
 }
