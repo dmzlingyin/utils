@@ -4,9 +4,10 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/dmzlingyin/utils/lazy"
 )
+
+var TypeError = reflect.TypeOf((*error)(nil)).Elem()
 
 type Container struct {
 	instances map[string]*instance
@@ -71,7 +72,7 @@ func (c *Container) Call(f any) error {
 		return err
 	}
 	if len(res) > 0 {
-		if res[0].Type() == reflects.TypeError && !res[0].IsNil() {
+		if res[0].Type() == TypeError && !res[0].IsNil() {
 			return res[0].Interface().(error)
 		}
 	}
