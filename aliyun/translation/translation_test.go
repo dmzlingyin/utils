@@ -1,13 +1,8 @@
 package translation
 
 import (
-	"github.com/cuigh/auxo/config"
 	"testing"
 )
-
-func init() {
-	config.AddFolder("../../config")
-}
 
 func TestTranslate(t *testing.T) {
 	tr, err := New()

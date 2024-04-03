@@ -5,12 +5,11 @@ go 1.21.5
 require (
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.6
 	github.com/alibabacloud-go/imageaudit-20191230/v3 v3.0.4
-	github.com/alibabacloud-go/imageseg-20191230/v2 v2.0.4
 	github.com/alibabacloud-go/tea v1.2.2
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.5
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.707
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
-	github.com/cuigh/auxo v0.0.0-20231120100738-c18a219b513f
+	github.com/google/uuid v1.3.0
 )
 
 require (
@@ -36,4 +35,5 @@ require (
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
