@@ -18,7 +18,7 @@ func (c *Config) Get(field string) gjson.Result {
 }
 
 func (c *Config) SetProfile(profile string) {
-	f, err := os.ReadFile(profile + ".json")
+	f, err := os.ReadFile(profile)
 	if err != nil {
 		panic(err)
 	}
