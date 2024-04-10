@@ -11,8 +11,8 @@ import (
 )
 
 // Register 注册路由
-func Register(g *gin.RouterGroup, name string) {
-	ins, err := ioc.TryFind(fmt.Sprintf("handler.%s", name))
+func Register(g *gin.RouterGroup, prefix, name string) {
+	ins, err := ioc.TryFind(prefix + name)
 	if err != nil {
 		panic(err)
 	}
@@ -28,6 +28,9 @@ func Register(g *gin.RouterGroup, name string) {
 			continue
 		}
 		field := t.Field(i)
+		if h == nil {
+			panic(fmt.Sprintf("handler %s.%s isn't initialized", t.Name(), field.Name))
+		}
 		path := field.Tag.Get("path")
 		relativePath := fmt.Sprintf("/%s%s", name, path)
 		method := field.Tag.Get("method")
