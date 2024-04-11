@@ -9,9 +9,13 @@ require (
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.5
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.707
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
+	github.com/casdoor/casdoor-go-sdk v0.41.0
+	github.com/cuigh/auxo v0.0.0-20231120100738-c18a219b513f
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/tidwall/gjson v1.17.1
+	golang.org/x/oauth2 v0.19.0
 )
 
 require (
@@ -36,6 +40,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
@@ -56,8 +61,7 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
