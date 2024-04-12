@@ -2,94 +2,86 @@ package oauth2
 
 import (
 	"context"
-	"github.com/cuigh/auxo/app/ioc"
-	"github.com/cuigh/auxo/errors"
+	"errors"
+	"fmt"
 	"golang.org/x/oauth2"
-	"time"
 )
 
+type OauthType string
+
 const (
-	KindGoogle   = "google"
-	KindFacebook = "facebook"
-	KindApple    = "apple"
-	KindMobile   = "mobile"
-	KindWechat   = "wechat"
-	KindAuth0    = "auth0"
-	KindCasdoor  = "casdoor"
-	KindDiscord  = "discord"
-	KindTwitter  = "twitter"
+	TypeGoogle   OauthType = "google"
+	TypeApple    OauthType = "apple"
+	TypeFacebook OauthType = "facebook"
+	TypeDiscord  OauthType = "discord"
+	TypeTwitter  OauthType = "twitter"
+	TypeWechat   OauthType = "wechat"
+	TypeCasdoor  OauthType = "casdoor"
 )
 
 type User struct {
-	ID       string
-	Username string
-	Avatar   string
-	Email    string
-	Phone    string
+	ID       string // 第三方用户ID
+	Username string // 用户名
+	Avatar   string // 头像
+	Email    string // 邮箱
+	Phone    string // 手机
 }
 
 type AuthArgs struct {
-	AppName    string
-	Ctx        context.Context
-	Type       string
-	Code       string
-	PCode      string
-	MobileNum  string
-	MobileCode string
+	// 登录类型
+	Type OauthType
+	// 授权码
+	Code string
+	// 随机值, 防止 XSRF 攻击
+	State string
+	// 客户端可以直接传递token, 省略了code换取token的步骤
+	Token string
+	// 如果微信登录要获取手机号,需多传一个code
+	PCode string
 }
 
-type Service interface {
-	Authorize(args *AuthArgs) (*oauth2.Token, *User, error)
+type Builder func() Provider
+
+type Provider interface {
+	Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, *User, error)
 }
 
-func NewService() Service {
-	return &service{
-		google:   NewGoogle(),
-		apple:    NewApple(),
-		facebook: NewFacebook(),
-		discord:  NewDiscord(),
-		twitter:  NewTwitter(),
-		casdoor:  NewCasdoor(),
-		wechat:   NewWechat(),
+func New(ots ...OauthType) Provider {
+	c := &Client{
+		providers: make(map[OauthType]Provider),
+		builders: map[OauthType]Builder{
+			TypeGoogle:   NewGoogle,
+			TypeApple:    NewApple,
+			TypeFacebook: NewFacebook,
+			TypeDiscord:  NewDiscord,
+			TypeTwitter:  NewTwitter,
+			TypeWechat:   NewWechat,
+			TypeCasdoor:  NewCasdoor,
+		},
 	}
-}
-
-type service struct {
-	google   *Google
-	facebook *Facebook
-	apple    *Apple
-	wechat   *Wechat
-	casdoor  *Casdoor
-	discord  *Discord
-	twitter  *Twitter
-}
-
-func (s *service) Authorize(args *AuthArgs) (*oauth2.Token, *User, error) {
-	switch args.Type {
-	case KindGoogle:
-		return s.google.Authorize(args.Ctx, args.Code, args.AppName)
-	case KindFacebook:
-		return s.facebook.Authorize(args.Ctx, args.Code)
-	case KindApple:
-		return s.apple.Authorize(args.Ctx, args.Code)
-	case KindWechat:
-		return s.wechat.Authorize(args.Ctx, args.Code, args.PCode)
-	case KindCasdoor:
-		return s.casdoor.Authorize(args.Code)
-	case KindDiscord:
-		return s.discord.Authorize(args.Ctx, args.Code)
-	case KindTwitter:
-		return s.twitter.Authorize(args.Ctx, args.Code)
-	default:
-		return nil, nil, errors.New("not supported auth type")
+	for _, ot := range ots {
+		if builder, ok := c.builders[ot]; ok {
+			c.register(ot, builder())
+		}
 	}
+	return c
 }
 
-func init() {
-	ioc.Put(NewService, ioc.Name("oauth2.service"))
+type Client struct {
+	providers map[OauthType]Provider
+	builders  map[OauthType]Builder
 }
 
-// createExpiry 指定默认的登录时效: 2周
-func createExpiry() time.Time {
-	return time.Now().Add(time.Hour * 24 * 14)
+func (c *Client) register(ot OauthType, p Provider) {
+	if _, ok := c.providers[ot]; ok {
+		panic("duplicate processor: " + ot)
+	}
+	c.providers[ot] = p
+}
+
+func (c *Client) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, *User, error) {
+	if p, ok := c.providers[args.Type]; ok {
+		return p.Authorize(ctx, args)
+	}
+	return nil, nil, errors.New(fmt.Sprintf("not supported oauth type: %s", args.Type))
 }

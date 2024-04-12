@@ -21,7 +21,7 @@ const (
 	GoogleScopeEmail   = "https://www.googleapis.com/auth/userinfo.email"
 )
 
-func NewGoogle() *Google {
+func NewGoogle() Provider {
 	cfg := &oauth2.Config{
 		ClientID:     config.GetString("oauth2.google.client_id"),
 		ClientSecret: config.GetString("oauth2.google.client_secret"),
@@ -34,31 +34,27 @@ func NewGoogle() *Google {
 		Scopes:      []string{GoogleScopeProfile, GoogleScopeEmail},
 	}
 
-	return &Google{
+	return &google{
 		cfg:     cfg,
 		decoder: jwt.NewDecoder(GoogleKeyURL),
 	}
 }
 
-type Google struct {
+type google struct {
 	cfg     *oauth2.Config
 	decoder *jwt.Decoder
 }
 
-func (g *Google) Authorize(ctx context.Context, code string, app string) (token *oauth2.Token, user *User, err error) {
-	cfg := g.cfg
-	// code -> token
-	token, err = cfg.Exchange(ctx, code)
-
+func (g *google) Authorize(ctx context.Context, args *AuthArgs) (token *oauth2.Token, user *User, err error) {
+	token, err = g.cfg.Exchange(ctx, args.Code)
 	if err != nil {
 		return
 	} else if !token.Valid() {
 		err = errors.New("invalid token")
 		return
 	}
-	token.Expiry = createExpiry()
 
-	res, err := cfg.Client(ctx, token).Get(GoogleUserURL)
+	res, err := g.cfg.Client(ctx, token).Get(GoogleUserURL)
 	if err != nil {
 		return
 	}

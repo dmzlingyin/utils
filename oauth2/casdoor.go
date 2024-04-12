@@ -1,13 +1,14 @@
 package oauth2
 
 import (
+	"context"
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/dmzlingyin/utils/config"
 	"golang.org/x/oauth2"
 	"os"
 )
 
-func NewCasdoor() *Casdoor {
+func NewCasdoor() Provider {
 	endpoint := config.Get("oauth2.casdoor.endpoint").String()
 	clientID := config.Get("oauth2.casdoor.client_id").String()
 	clientSecret := config.Get("oauth2.casdoor.client_secret").String()
@@ -18,19 +19,17 @@ func NewCasdoor() *Casdoor {
 		panic(err)
 	}
 	casdoorsdk.InitConfig(endpoint, clientID, clientSecret, string(file), organization, application)
-	return &Casdoor{}
+	return &casdoor{}
 }
 
-type Casdoor struct{}
+type casdoor struct{}
 
-func (c *Casdoor) Authorize(code string) (token *oauth2.Token, user *User, err error) {
+func (c *casdoor) Authorize(_ context.Context, args *AuthArgs) (token *oauth2.Token, user *User, err error) {
 	state := "marmot"
-	token, err = casdoorsdk.GetOAuthToken(code, state)
+	token, err = casdoorsdk.GetOAuthToken(args.Code, state)
 	if err != nil {
 		return
 	}
-	token.Expiry = createExpiry()
-
 	claims, err := casdoorsdk.ParseJwtToken(token.AccessToken)
 	if err != nil {
 		return

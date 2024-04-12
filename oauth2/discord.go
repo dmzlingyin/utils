@@ -20,7 +20,7 @@ const (
 	DiscordScopeEmail = "email"
 )
 
-func NewDiscord() *Discord {
+func NewDiscord() Provider {
 	cfg := &oauth2.Config{
 		ClientID:     config.GetString("oauth2.discord.client_id"),
 		ClientSecret: config.GetString("oauth2.discord.client_secret"),
@@ -33,24 +33,23 @@ func NewDiscord() *Discord {
 		Scopes:      []string{DiscordScopeUser, DiscordScopeEmail},
 	}
 
-	return &Discord{
+	return &discord{
 		cfg: cfg,
 	}
 }
 
-type Discord struct {
+type discord struct {
 	cfg *oauth2.Config
 }
 
-func (d *Discord) Authorize(ctx context.Context, code string) (token *oauth2.Token, user *User, err error) {
-	token, err = d.cfg.Exchange(ctx, code)
+func (d *discord) Authorize(ctx context.Context, args *AuthArgs) (token *oauth2.Token, user *User, err error) {
+	token, err = d.cfg.Exchange(ctx, args.Code)
 	if err != nil {
 		return
 	} else if !token.Valid() {
 		err = errors.New("invalid token")
 		return
 	}
-	token.Expiry = createExpiry()
 
 	res, err := d.cfg.Client(ctx, token).Get(DiscordUserURL)
 	if err != nil {
@@ -68,7 +67,7 @@ func (d *Discord) Authorize(ctx context.Context, code string) (token *oauth2.Tok
 		return nil, nil, err
 	}
 
-	avatar := "https://file.aitubo.ai/images/avatars/aituboer.png"
+	var avatar string
 	if u.Avatar != "" {
 		avatar = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.jpg", u.ID, u.Avatar)
 	}

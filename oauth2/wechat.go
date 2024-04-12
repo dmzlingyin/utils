@@ -12,13 +12,6 @@ import (
 	"time"
 )
 
-const (
-	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	numbers = "0123456789"
-)
-
-const DefaultAvatar = "https://avatar-04.oss-cn-beijing.aliyuncs.com/assets/avatar/1.jpg"
-
 type WechatLoginResp struct {
 	OpenId     string `json:"openid"`
 	SessionKey string `json:"session_key"`
@@ -39,26 +32,26 @@ type phoneInfo struct {
 	CountryCode     string `json:"countryCode"`
 }
 
-func NewWechat() *Wechat {
+func NewWechat() Provider {
 	appid := config.GetString("oauth2.wechat.app_id")
 	secret := config.GetString("oauth2.wechat.app_secret")
 	if appid == "" || secret == "" {
 		panic("the appid or secret of wechat get failed")
 	}
-	return &Wechat{
+	return &wechat{
 		appid:  appid,
 		secret: secret,
 	}
 }
 
-type Wechat struct {
+type wechat struct {
 	appid  string
 	secret string
 }
 
-func (w *Wechat) Authorize(ctx context.Context, code, pcode string) (*oauth2.Token, *User, error) {
+func (w *wechat) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, *User, error) {
 	url := "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
-	url = fmt.Sprintf(url, w.appid, w.secret, code)
+	url = fmt.Sprintf(url, w.appid, w.secret, args.Code)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -75,14 +68,13 @@ func (w *Wechat) Authorize(ctx context.Context, code, pcode string) (*oauth2.Tok
 		return nil, nil, errors.New(wResp.ErrMsg)
 	}
 
-	phone, err := w.getPhoneNumber(pcode)
+	phone, err := w.getPhoneNumber(args.PCode)
 	if err != nil {
 		return nil, nil, err
 	}
 	user := &User{
-		ID:     wResp.OpenId,
-		Avatar: DefaultAvatar,
-		Phone:  phone,
+		ID:    wResp.OpenId,
+		Phone: phone,
 	}
 	token := &oauth2.Token{
 		Expiry: time.Now().Add(time.Hour * 24),
@@ -91,7 +83,7 @@ func (w *Wechat) Authorize(ctx context.Context, code, pcode string) (*oauth2.Tok
 	return token, user, nil
 }
 
-func (w *Wechat) getPhoneNumber(code string) (string, error) {
+func (w *wechat) getPhoneNumber(code string) (string, error) {
 	ac, err := w.getAccessToken()
 	if err != nil {
 		return "", err
@@ -126,7 +118,7 @@ func (w *Wechat) getPhoneNumber(code string) (string, error) {
 	return phone.PhoneInfo.PhoneNumber, nil
 }
 
-func (w *Wechat) getAccessToken() (string, error) {
+func (w *wechat) getAccessToken() (string, error) {
 	// access token
 	type AT struct {
 		AccessToken string `json:"access_token"`

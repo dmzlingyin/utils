@@ -20,8 +20,8 @@ const (
 	FacebookScopePicture = "user_photos"
 )
 
-func NewFacebook() *Facebook {
-	return &Facebook{
+func NewFacebook() Provider {
+	return &facebook{
 		cfg: &oauth2.Config{
 			ClientID:     config.GetString("oauth2.facebook.client_id"),
 			ClientSecret: config.GetString("oauth2.facebook.client_secret"),
@@ -36,19 +36,18 @@ func NewFacebook() *Facebook {
 	}
 }
 
-type Facebook struct {
+type facebook struct {
 	cfg *oauth2.Config
 }
 
-func (g *Facebook) Authorize(ctx context.Context, code string) (*oauth2.Token, *User, error) {
+func (g *facebook) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, *User, error) {
 	// code -> token
-	token, err := g.cfg.Exchange(ctx, code)
+	token, err := g.cfg.Exchange(ctx, args.Code)
 	if err != nil {
 		return nil, nil, err
 	} else if !token.Valid() {
 		return nil, nil, fmt.Errorf("invalid token %w", err)
 	}
-	token.Expiry = createExpiry()
 
 	res, err := g.cfg.Client(ctx, token).Get(FacebookUserURL)
 	if err != nil {

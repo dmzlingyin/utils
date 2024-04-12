@@ -41,7 +41,7 @@ type JwtKeys struct {
 	E   string `json:"e"`
 }
 
-func NewApple() *Apple {
+func NewApple() Provider {
 	cfg := &AppleConfig{
 		keyId:       config.GetString("oauth2.apple.key_id"),
 		teamId:      config.GetString("oauth2.apple.team_id"),
@@ -53,25 +53,25 @@ func NewApple() *Apple {
 		panic(err)
 	}
 	cfg.secret = file
-	return &Apple{
+	return &apple{
 		cfg:     cfg,
 		decoder: mjwt.NewDecoder(AppleKeyURL),
 	}
 }
 
-type Apple struct {
+type apple struct {
 	cfg     *AppleConfig
 	decoder *mjwt.Decoder
 }
 
-func (a *Apple) Authorize(_ context.Context, code string) (token *oauth2.Token, user *User, err error) {
-	token, IDToken, err := a.getToken(code)
+func (a *apple) Authorize(_ context.Context, args *AuthArgs) (token *oauth2.Token, user *User, err error) {
+	var idToken string
+	token, idToken, err = a.getToken(args.Code)
 	if err != nil {
 		return
 	}
-	token.Expiry = createExpiry()
 
-	claims, err := a.decoder.Decode(IDToken)
+	claims, err := a.decoder.Decode(idToken)
 	if err != nil {
 		return
 	}
@@ -84,7 +84,7 @@ func (a *Apple) Authorize(_ context.Context, code string) (token *oauth2.Token, 
 	return
 }
 
-func (a *Apple) getToken(code string) (token *oauth2.Token, IDToken string, err error) {
+func (a *apple) getToken(code string) (token *oauth2.Token, IDToken string, err error) {
 	data, err := a.httpRequest("POST", AppleTokenURL, map[string]string{
 		"client_id":     a.cfg.clientId,
 		"client_secret": a.getAppleSecret(),
@@ -123,7 +123,7 @@ func (a *Apple) getToken(code string) (token *oauth2.Token, IDToken string, err 
 	return
 }
 
-func (a *Apple) httpRequest(method, addr string, params map[string]string) ([]byte, error) {
+func (a *apple) httpRequest(method, addr string, params map[string]string) ([]byte, error) {
 	form := url.Values{}
 	for k, v := range params {
 		form.Set(k, v)
@@ -149,7 +149,7 @@ func (a *Apple) httpRequest(method, addr string, params map[string]string) ([]by
 	return data, nil
 }
 
-func (a *Apple) getAppleSecret() string {
+func (a *apple) getAppleSecret() string {
 	token := &jwt.Token{
 		Header: map[string]interface{}{
 			"alg": "ES256",
@@ -171,7 +171,7 @@ func (a *Apple) getAppleSecret() string {
 	return ss
 }
 
-func (a *Apple) authKeyFromBytes(key []byte) (*ecdsa.PrivateKey, error) {
+func (a *apple) authKeyFromBytes(key []byte) (*ecdsa.PrivateKey, error) {
 	var err error
 
 	// Parse PEM block
