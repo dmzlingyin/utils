@@ -74,7 +74,7 @@ type Client struct {
 
 func (c *Client) register(ot OauthType, p Provider) {
 	if _, ok := c.providers[ot]; ok {
-		panic("duplicate processor: " + ot)
+		panic("duplicate provider: " + ot)
 	}
 	c.providers[ot] = p
 }
