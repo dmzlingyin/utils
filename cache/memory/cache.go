@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	DefaultTTL  = 10 * time.Minute
 	InfiniteTTL = -1
 )
 
