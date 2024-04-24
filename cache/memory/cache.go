@@ -44,7 +44,7 @@ func New(ttl time.Duration, evictInterval time.Duration) *Cache {
 			cache:    c,
 		}
 		go c.evictor.run()
-		runtime.SetFinalizer(C, c.evictor.shutdown)
+		runtime.SetFinalizer(C, shutdown)
 	}
 
 	return C
@@ -133,6 +133,6 @@ func (e *Evictor) evict() {
 	}
 }
 
-func (e *Evictor) shutdown() {
-	e.stop <- true
+func shutdown(c *Cache) {
+	c.evictor.stop <- true
 }
