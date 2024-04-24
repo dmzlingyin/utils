@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -23,13 +24,15 @@ func New(url string, ttl time.Duration) *Cache {
 }
 
 func (c *Cache) Set(ctx context.Context, key string, value any) error {
-	_, err := c.client.Set(ctx, key, value, c.ttl).Result()
-	return err
+	return c.SetWithTTL(ctx, key, value, c.ttl)
 }
 
 func (c *Cache) SetWithTTL(ctx context.Context, key string, value any, ttl time.Duration) error {
-	_, err := c.client.Set(ctx, key, value, ttl).Result()
-	return err
+	v, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return c.client.Set(ctx, key, v, ttl).Err()
 }
 
 func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
@@ -37,6 +40,14 @@ func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
 	return count == 1, err
 }
 
+func (c *Cache) Remove(ctx context.Context, key string) error {
+	return c.client.Del(ctx, key).Err()
+}
+
 func (c *Cache) Scan(ctx context.Context, key string, value any) error {
-	return c.client.Get(ctx, key).Scan(value)
+	v, err := c.client.Get(ctx, key).Bytes()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(v, value)
 }

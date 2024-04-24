@@ -50,12 +50,7 @@ func New(ttl time.Duration, evictInterval time.Duration) *Cache {
 }
 
 func (c *cache) Set(key string, value any) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.elements[key] = &Element{
-		value:  value,
-		expiry: time.Now().Add(c.ttl).UnixNano(),
-	}
+	c.SetWithTTL(key, value, c.ttl)
 }
 
 func (c *cache) SetWithTTL(key string, value any, ttl time.Duration) {
