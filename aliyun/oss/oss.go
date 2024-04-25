@@ -3,12 +3,12 @@ package oss
 import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/dmzlingyin/utils/backoff"
+	"github.com/dmzlingyin/utils/config"
 	"github.com/google/uuid"
 	"strconv"
 
 	"io"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 )
@@ -18,10 +18,10 @@ type ObjectMeta struct {
 }
 
 func NewClient(opts ...Option) (*Client, error) {
-	endpoint := os.Getenv("OSS_ENDPOINT")
-	keyID := os.Getenv("OSS_KEY_ID")
-	keySecret := os.Getenv("OSS_KEY_SECRET")
-	bucketName := os.Getenv("OSS_BUCKET")
+	endpoint := config.GetString("aliyun.oss.endpoint")
+	keyID := config.GetString("aliyun.oss.key_id")
+	keySecret := config.GetString("aliyun.oss.key_secret")
+	bucketName := config.GetString("aliyun.oss.bucket")
 
 	client, err := oss.New(endpoint, keyID, keySecret)
 	if err != nil {

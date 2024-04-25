@@ -2,13 +2,14 @@ package translation
 
 import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alimt"
+	"github.com/dmzlingyin/utils/config"
 	"os"
 )
 
 func New() (*Translator, error) {
 	region := "cn-hangzhou"
-	key := os.Getenv("TRANSLATION_KEY_ID")
-	secret := os.Getenv("TRANSLATION_KEY_SECRET")
+	key := config.GetString("aliyun.translation.key_id")
+	secret := os.Getenv("aliyun.translation.key_secret")
 	client, err := alimt.NewClientWithAccessKey(region, key, secret)
 	if err != nil {
 		return nil, err

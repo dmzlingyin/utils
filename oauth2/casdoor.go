@@ -9,11 +9,11 @@ import (
 )
 
 func NewCasdoor() Provider {
-	endpoint := config.Get("oauth2.casdoor.endpoint").String()
-	clientID := config.Get("oauth2.casdoor.client_id").String()
-	clientSecret := config.Get("oauth2.casdoor.client_secret").String()
-	organization := config.Get("oauth2.casdoor.organization").String()
-	application := config.Get("oauth2.casdoor.application").String()
+	endpoint := config.GetString("oauth2.casdoor.endpoint")
+	clientID := config.GetString("oauth2.casdoor.client_id")
+	clientSecret := config.GetString("oauth2.casdoor.client_secret")
+	organization := config.GetString("oauth2.casdoor.organization")
+	application := config.GetString("oauth2.casdoor.application")
 	file, err := os.ReadFile("config/cert")
 	if err != nil {
 		panic(err)

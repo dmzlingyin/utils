@@ -17,7 +17,7 @@ func TestAudit(t *testing.T) {
 	}
 	for _, text := range texts {
 		time.Sleep(time.Second)
-		if err := a.Audit(text); err == nil {
+		if err = a.Audit(text); err == nil {
 			t.Fatal("audit error")
 		}
 	}

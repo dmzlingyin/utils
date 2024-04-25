@@ -2,12 +2,11 @@ package aduit
 
 import (
 	"errors"
-	"os"
-
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	imageaudit20191230 "github.com/alibabacloud-go/imageaudit-20191230/v3/client"
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
+	"github.com/dmzlingyin/utils/config"
 )
 
 // 指定文本检测的应用场景 https://help.aliyun.com/document_detail/155010.htm?spm=a2c4g.477836.0.0.630a661eLBlscB
@@ -15,12 +14,12 @@ import (
 var LABELS = []string{"spam", "politics", "abuse", "terrorism", "porn", "contraband", "ad"}
 
 func NewAuditor() (*Auditor, error) {
-	config := &openapi.Config{
-		AccessKeyId:     tea.String(os.Getenv("AUDIT_KEY_ID")),
-		AccessKeySecret: tea.String(os.Getenv("AUDIT_KEY_SECRET")),
+	conf := &openapi.Config{
+		AccessKeyId:     tea.String(config.GetString("aliyun.audit.key_id")),
+		AccessKeySecret: tea.String(config.GetString("aliyun.audit.key_secret")),
 		Endpoint:        tea.String("imageaudit.cn-shanghai.aliyuncs.com"),
 	}
-	client, err := imageaudit20191230.NewClient(config)
+	client, err := imageaudit20191230.NewClient(conf)
 	return &Auditor{client: client}, err
 }
 
