@@ -1,4 +1,4 @@
-package aduit
+package audit
 
 import (
 	"testing"
