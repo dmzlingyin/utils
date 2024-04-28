@@ -3,8 +3,8 @@ package oauth2
 import (
 	"context"
 	"encoding/json"
-	"github.com/cuigh/auxo/config"
-	"github.com/cuigh/auxo/errors"
+	"errors"
+	"github.com/dmzlingyin/utils/config"
 	"golang.org/x/oauth2"
 )
 

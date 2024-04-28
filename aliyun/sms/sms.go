@@ -5,9 +5,7 @@ import (
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
-	"github.com/cuigh/auxo/errors"
 	"github.com/dmzlingyin/utils/config"
-	"github.com/dmzlingyin/utils/misc"
 	"strings"
 )
 

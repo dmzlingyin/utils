@@ -12,7 +12,6 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.707
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/casdoor/casdoor-go-sdk v0.41.0
-	github.com/cuigh/auxo v0.0.0-20231120100738-c18a219b513f
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
@@ -69,5 +68,6 @@ require (
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

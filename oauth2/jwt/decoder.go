@@ -4,7 +4,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/cuigh/auxo/errors"
+	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"math/big"
 	"net/http"
@@ -98,7 +98,7 @@ func (d *Decoder) getSubFromToken(idToken string) (*Claims, error) {
 	if ok && token.Valid {
 		return claims, nil
 	}
-	return nil, errors.Format("get userID err, ok: %v valid: %v", ok, token.Valid)
+	return nil, errors.New("get userID err")
 }
 
 func (d *Decoder) getPublicKey(keyId string) *rsa.PublicKey {
