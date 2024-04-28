@@ -32,8 +32,7 @@ func New() *Sms {
 	}
 }
 
-func (s *Sms) Send(phone string) error {
-	captcha := misc.RandStr(6)
+func (s *Sms) Send(phone, captcha string) error {
 	b, err := json.Marshal(map[string]any{"code": captcha})
 	if err != nil {
 		return err
