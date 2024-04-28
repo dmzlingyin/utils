@@ -74,19 +74,24 @@ func (c *cache) SetWithTTL(_ context.Context, key string, value any, ttl time.Du
 func (c *cache) Exists(_ context.Context, key string) (bool, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	_, ok := c.elements[key]
-	return ok, nil
+	v, ok := c.elements[key]
+	if !ok {
+		return false, nil
+	}
+	if v.expiry > 0 && time.Now().UnixNano() > v.expiry {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (c *cache) Remove(ctx context.Context, key string) error {
-	ok, err := c.Exists(ctx, key)
+	exists, err := c.Exists(ctx, key)
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if !exists {
 		return nil
 	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.elements, key)
@@ -94,38 +99,36 @@ func (c *cache) Remove(ctx context.Context, key string) error {
 }
 
 func (c *cache) Scan(_ context.Context, key string, value any) error {
-	v, ok := c.Get(key)
+	v, ok := c.get(key)
 	if !ok {
 		return errors.New("key not found in cache")
 	}
 
 	val := reflect.ValueOf(value)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
-		// 确保value是一个非空指针
 		return errors.New("value must be a non-nil pointer")
 	}
-	valElem := val.Elem()
-	if valElem.Type() != reflect.TypeOf(v) {
-		// 确保缓存值类型与value指针指向的类型相同
+	elem := val.Elem()
+	if elem.Type() != reflect.TypeOf(v) {
 		return errors.New("type mismatch")
 	}
-	valElem.Set(reflect.ValueOf(v))
+	elem.Set(reflect.ValueOf(v))
 
 	return nil
 }
 
-func (c *cache) Get(key string) (any, bool) {
+func (c *cache) get(key string) (any, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	ele, ok := c.elements[key]
+	v, ok := c.elements[key]
 	if !ok {
 		return nil, false
 	}
-	if ele.expiry > 0 && time.Now().UnixNano() > ele.expiry {
+	if v.expiry > 0 && time.Now().UnixNano() > v.expiry {
 		return nil, false
 	}
-	return ele.value, true
+	return v.value, true
 }
 
 type Evictor struct {

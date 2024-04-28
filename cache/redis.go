@@ -41,10 +41,24 @@ func (r *Redis) Exists(ctx context.Context, key string) (bool, error) {
 }
 
 func (r *Redis) Remove(ctx context.Context, key string) error {
+	exists, err := r.Exists(ctx, key)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrKeyNotFound
+	}
 	return r.client.Del(ctx, key).Err()
 }
 
 func (r *Redis) Scan(ctx context.Context, key string, value any) error {
+	exists, err := r.Exists(ctx, key)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrKeyNotFound
+	}
 	v, err := r.client.Get(ctx, key).Bytes()
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -12,3 +13,7 @@ type Cache interface {
 	Remove(ctx context.Context, key string) error
 	Scan(ctx context.Context, key string, value any) error
 }
+
+var (
+	ErrKeyNotFound = errors.New("key not found in cache")
+)
