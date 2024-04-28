@@ -1,4 +1,4 @@
-package redis
+package cache
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type User struct {
 
 func TestRedis(t *testing.T) {
 	url := "redis://:@192.168.7.251:6379/0"
-	c := New(url, 5*time.Second)
+	c := NewRedis(url, 5*time.Second)
 
 	ctx := context.Background()
 	if err := c.Set(ctx, "foo", "bar"); err != nil {
