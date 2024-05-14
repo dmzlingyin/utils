@@ -12,6 +12,10 @@ func GetString(field string) string {
 	return config.Get(field).String()
 }
 
+func GetBool(field string) bool {
+	return config.Get(field).Bool()
+}
+
 func SetProfile(profile string) {
 	config.SetProfile(profile)
 }
