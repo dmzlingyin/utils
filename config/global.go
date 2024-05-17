@@ -16,6 +16,10 @@ func GetBool(field string) bool {
 	return config.Get(field).Bool()
 }
 
+func GetUint64(field string) uint64 {
+	return config.Get(field).Uint()
+}
+
 func SetProfile(profile string) {
 	config.SetProfile(profile)
 }

@@ -15,7 +15,10 @@ func NewDatabase() *mongo.Database {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(config.GetString("mongo.uri")))
+	opt := options.Client().ApplyURI(config.GetString("mongo.uri"))
+	opt.SetMaxPoolSize(config.GetUint64("mongo.max_pool_size"))
+	opt.SetMinPoolSize(config.GetUint64("mongo.min_pool_size"))
+	client, err := mongo.Connect(ctx, opt)
 	if err != nil {
 		panic(err)
 	}
