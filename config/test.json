@@ -8,5 +8,15 @@
     "access_key_secret": "",
     "sign_name": "",
     "template_code": ""
+  },
+  "pay": {
+    "wechat": {
+      "app_id": "xxx",
+      "mch_id": "xxx",
+      "mch_cert_serial_no": "xxx",
+      "mch_api_v3_key": "xxx",
+      "private_key_path": "config/key.pem",
+      "notify_url": "https://test.cn/notify"
+    }
   }
 }

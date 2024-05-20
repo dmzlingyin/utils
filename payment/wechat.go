@@ -6,14 +6,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/dmzlingyin/utils/cast"
-	"github.com/dmzlingyin/utils/lazy"
+	"github.com/dmzlingyin/utils/config"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/auth/verifiers"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/downloader"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
-	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/app"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/h5"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/native"
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
@@ -21,47 +21,60 @@ import (
 	"time"
 )
 
-type Transaction = payments.Transaction
-
-type Config struct {
-	AppID           string `option:"app_id"`
-	MchID           string `option:"mch_id"`
-	MchCertSerialNo string `option:"mch_cert_serial_no"`
-	MchAPIv3Key     string `option:"mch_api_v3_key"`
-	PrivateKey      string `option:"private_key"`
-	NotifyURL       string `option:"notify_url"`
-	PayType         string `option:"pay_type"` // 支付类型，比如native（网站支付），或者jsapi（公众号内支付）
+type WechatPrepayReq struct {
+	OutTradeNo  string // 商户内部订单号
+	Amount      int64  // 支付金额(分)
+	Description string // 商品描述
+	OpenID      string // 用户在普通商户AppID下的唯一标识
+	PayType     string // 支付类型: app、h5、jsapi、native
 }
 
-type WechatPayResponse struct {
-	TimeStamp string `json:"timeStamp"`
-	NonceStr  string `json:"nonceStr"`
-	Package   string `json:"package"`
-	SignType  string `json:"signType"`
-	PaySign   string `json:"paySign"`
-	IsPay     bool   `json:"isPay"`
+type WechatPrepayResp struct {
+	PrepayID string `json:"prepay_id,omitempty"` // 预支付ID(app)
+	H5Url    string `json:"h5_url,omitempty"`    // 支付跳转链接(h5)
+	CodeUrl  string `json:"code_url,omitempty"`  // 用于生成支付二维码，然后提供给用户扫码支付(native)
+	PrepayWithRequestPaymentResp
+}
+
+type PrepayWithRequestPaymentResp struct {
+	AppID     string `json:"app_id,omitempty"`     // 应用ID
+	PartnerID string `json:"partner_id,omitempty"` // 直连商户号
+	TimeStamp string `json:"timestamp,omitempty"`  // 时间戳
+	NonceStr  string `json:"nonce_str,omitempty"`  // 随机字符串
+	Package   string `json:"package,omitempty"`    // 暂填写固定值: WXPay
+	SignType  string `json:"sign_type,omitempty"`  // 签名类型: RSA
+	Sign      string `json:"pay_sign,omitempty"`   // 签名值
+}
+
+type WechatPayConfig struct {
+	AppID           string // 应用ID
+	MchID           string // 直连商户号
+	MchCertSerialNo string // 证书序列号
+	MchAPIv3Key     string // api v3秘钥
+	PrivateKeyPath  string // 私钥路径
+	NotifyURL       string // 回调地址
 }
 
 type WechatPay struct {
-	cfg     *Config
-	jss     *jsapi.JsapiApiService
-	nas     *native.NativeApiService
-	pk      *rsa.PrivateKey
-	nh      *lazy.Value[*notify.Handler]
-	options map[string]string
+	cfg *WechatPayConfig
+	aas *app.AppApiService       // app支付
+	has *h5.H5ApiService         // h5支付
+	jss *jsapi.JsapiApiService   // jsapi支付
+	nas *native.NativeApiService // native支付(扫码支付)
+	pk  *rsa.PrivateKey
 }
 
-func newWechatPay(options map[string]string) (*WechatPay, error) {
-	cfg := &Config{
-		AppID:           options[OptionAppId],
-		MchID:           options[OptionMchId],
-		MchCertSerialNo: options[OptionMchCertSerialNo],
-		MchAPIv3Key:     options[OptionMchAPIv3Key],
-		PrivateKey:      options[OptionPrivateKey],
-		NotifyURL:       options[OptionNotifyURL],
+func NewWechatPay() (*WechatPay, error) {
+	cfg := &WechatPayConfig{
+		AppID:           config.GetString("pay.wechat.app_id"),
+		MchID:           config.GetString("pay.wechat.mch_id"),
+		MchCertSerialNo: config.GetString("pay.wechat.mch_cert_serial_no"),
+		MchAPIv3Key:     config.GetString("pay.wechat.mch_api_v3_key"),
+		PrivateKeyPath:  config.GetString("pay.wechat.private_key_path"),
+		NotifyURL:       config.GetString("pay.wechat.notify_url"),
 	}
 
-	privateKey, err := base64.StdEncoding.DecodeString(cfg.PrivateKey)
+	privateKey, err := base64.StdEncoding.DecodeString(cfg.PrivateKeyPath)
 	// 加载私钥
 	key, err := utils.LoadPrivateKey(string(privateKey))
 	if err != nil {
@@ -72,41 +85,20 @@ func newWechatPay(options map[string]string) (*WechatPay, error) {
 	opts := []core.ClientOption{
 		option.WithWechatPayAutoAuthCipher(cfg.MchID, cfg.MchCertSerialNo, key, cfg.MchAPIv3Key),
 	}
-
 	client, err := core.NewClient(context.Background(), opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &WechatPay{
-		cfg:     cfg,
-		jss:     &jsapi.JsapiApiService{Client: client},
-		nas:     &native.NativeApiService{Client: client},
-		pk:      key,
-		options: options,
+		cfg: cfg,
+		aas: &app.AppApiService{Client: client},
+		has: &h5.H5ApiService{Client: client},
+		jss: &jsapi.JsapiApiService{Client: client},
+		nas: &native.NativeApiService{Client: client},
+		pk:  key,
 	}
-	s.nh = &lazy.Value[*notify.Handler]{New: s.newNotifyHandler}
 	return s, err
-}
-
-func (p *WechatPay) GetChannel() string {
-	return ChannelWechat
-}
-
-func (p *WechatPay) HandleNotify(ctx context.Context, req *http.Request, handler func(t *Transaction) (args *UpdateStatusArgs)) (args *UpdateStatusArgs, err error) {
-	// 获取通知处理器
-	nh, err := p.nh.Get()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create notify handler: %s", err)
-	}
-
-	// 解析请求
-	rc := new(Transaction)
-	if _, err := nh.ParseNotifyRequest(ctx, req, rc); err != nil {
-		return nil, fmt.Errorf("failed to parse request: %s", err)
-	}
-
-	return handler(rc), err
 }
 
 func (p *WechatPay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {
@@ -128,7 +120,6 @@ func (p *WechatPay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, e
 
 func (p *WechatPay) Query(ctx context.Context, payId string) (*QueryResult, error) {
 	res := new(QueryResult)
-	// core是回调通知处理库
 	req := jsapi.QueryOrderByOutTradeNoRequest{
 		OutTradeNo: core.String(payId),
 		Mchid:      core.String(p.cfg.MchID),
@@ -145,61 +136,131 @@ func (p *WechatPay) Query(ctx context.Context, payId string) (*QueryResult, erro
 	return res, err
 }
 
-func (p *WechatPay) Create(ctx context.Context, req *CreateArgs) (*CreateResult, error) {
-	switch req.PayType {
+// PrePay 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付。
+func (p *WechatPay) PrePay(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
+	switch args.PayType {
+	case "app":
+		return p.prepayApp(ctx, args)
+	case "h5":
+		return p.prepayH5(ctx, args)
 	case "native":
-		return p.createNative(ctx, req)
+		return p.prepayNative(ctx, args)
 	case "jsapi":
-		return p.createJsapi(ctx, req)
+		return p.prepayJsapi(ctx, args)
 	default:
-		return nil, fmt.Errorf("invalid paytype, payType:%s", req.PayType)
+		return nil, fmt.Errorf("invalid paytype, payType:%s", args.PayType)
 	}
 }
 
-func (p *WechatPay) createNative(ctx context.Context, req *CreateArgs) (*CreateResult, error) {
+// prepayApp 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付
+func (p *WechatPay) prepayApp(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
+	prepayRequest := app.PrepayRequest{
+		Appid:       core.String(p.cfg.AppID),
+		Mchid:       core.String(p.cfg.MchID),
+		Description: core.String(args.Description),
+		OutTradeNo:  core.String(args.OutTradeNo),
+		NotifyUrl:   core.String(p.cfg.NotifyURL),
+		Amount: &app.Amount{
+			Total: core.Int64(args.Amount),
+		},
+	}
+	resp, result, err := p.aas.PrepayWithRequestPayment(ctx, prepayRequest)
+	if err != nil {
+		return nil, err
+	}
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return &WechatPrepayResp{
+		PrepayID: *resp.PrepayId,
+		PrepayWithRequestPaymentResp: PrepayWithRequestPaymentResp{
+			AppID:     p.cfg.AppID,
+			PartnerID: *resp.PartnerId,
+			TimeStamp: *resp.TimeStamp,
+			NonceStr:  *resp.NonceStr,
+			Package:   *resp.Package,
+			SignType:  "RSA",
+			Sign:      *resp.Sign,
+		},
+	}, nil
+}
+
+// prepayH5 拉起微信支付收银台的中间页面，可通过访问该URL来拉起微信客户端，完成支付，h5_url的有效期为5分钟
+func (p *WechatPay) prepayH5(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
+	prepayRequest := h5.PrepayRequest{
+		Appid:       core.String(p.cfg.AppID),
+		Mchid:       core.String(p.cfg.MchID),
+		Description: core.String(args.Description),
+		OutTradeNo:  core.String(args.OutTradeNo),
+		NotifyUrl:   core.String(p.cfg.NotifyURL),
+		Amount: &h5.Amount{
+			Total: core.Int64(args.Amount),
+		},
+	}
+	resp, result, err := p.has.Prepay(ctx, prepayRequest)
+	if err != nil {
+		return nil, err
+	}
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return &WechatPrepayResp{H5Url: *resp.H5Url}, nil
+}
+
+// prepayNative 生成支付链接参数code_url，然后将该参数值生成二维码图片展示给用户。用户在使用微信客户端扫描二维码后，可以直接跳转到微信支付页面完成支付操作
+func (p *WechatPay) prepayNative(ctx context.Context, req *WechatPrepayReq) (*WechatPrepayResp, error) {
 	prepayRequest := native.PrepayRequest{
 		Appid:       core.String(p.cfg.AppID),
 		Mchid:       core.String(p.cfg.MchID),
 		Description: core.String(req.Description),
-		OutTradeNo:  core.String(req.OrderID),
+		OutTradeNo:  core.String(req.OutTradeNo),
 		NotifyUrl:   core.String(p.cfg.NotifyURL),
 		Amount: &native.Amount{
-			Currency: core.String("CNY"),
-			Total:    core.Int64(int64(req.Money)),
+			Total: core.Int64(req.Amount),
 		},
 	}
-	result, _, err := p.nas.Prepay(ctx, prepayRequest)
+	resp, result, err := p.nas.Prepay(ctx, prepayRequest)
 	if err != nil {
 		return nil, err
 	}
-	//s.logger.Debugf("code url: %s", *result.CodeUrl)
-	return &CreateResult{
-		CodeURL: *result.CodeUrl,
-	}, nil
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return &WechatPrepayResp{CodeUrl: *resp.CodeUrl}, nil
 }
 
-func (p *WechatPay) createJsapi(ctx context.Context, req *CreateArgs) (*CreateResult, error) {
+// prepayJsapi 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付
+func (p *WechatPay) prepayJsapi(ctx context.Context, req *WechatPrepayReq) (*WechatPrepayResp, error) {
 	prepayRequest := jsapi.PrepayRequest{
 		Appid:       core.String(p.cfg.AppID),
 		Mchid:       core.String(p.cfg.MchID),
 		Description: core.String(req.Description),
-		OutTradeNo:  core.String(req.OrderID),
+		OutTradeNo:  core.String(req.OutTradeNo),
 		NotifyUrl:   core.String(p.cfg.NotifyURL),
 		Amount: &jsapi.Amount{
-			Currency: core.String("CNY"),
-			Total:    core.Int64(int64(req.Money)),
+			Total: core.Int64(req.Amount),
 		},
 		Payer: &jsapi.Payer{
-			Openid: core.String(req.CustomerID),
+			Openid: core.String(req.OpenID),
 		},
 	}
-	rep, _, err := p.jss.Prepay(ctx, prepayRequest)
+	resp, result, err := p.jss.PrepayWithRequestPayment(ctx, prepayRequest)
 	if err != nil {
 		return nil, err
 	}
-	//s.logger.Debugf("code url: %s", *rep.PrepayId)
-	return &CreateResult{
-		OrderID: *rep.PrepayId,
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return &WechatPrepayResp{
+		PrepayID: *resp.PrepayId,
+		PrepayWithRequestPaymentResp: PrepayWithRequestPaymentResp{
+			AppID:     *resp.Appid,
+			TimeStamp: *resp.TimeStamp,
+			NonceStr:  *resp.NonceStr,
+			Package:   *resp.Package,
+			SignType:  *resp.SignType,
+			Sign:      *resp.PaySign,
+		},
 	}, nil
 }
 
@@ -217,47 +278,4 @@ func (p *WechatPay) newNotifyHandler() (h *notify.Handler, err error) {
 
 	cm := downloader.MgrInstance().GetCertificateVisitor(p.cfg.MchID)
 	return notify.NewRSANotifyHandler(p.cfg.MchAPIv3Key, verifiers.NewSHA256WithRSAVerifier(cm))
-}
-
-func (p *WechatPay) GenerateResponse(paymentId string) (*WechatPayResponse, error) {
-	res := &WechatPayResponse{}
-	// 时间戳(秒)
-	timeUnix := time.Now().Unix()
-	res.TimeStamp = cast.ToString(timeUnix)
-	// 随机字符串
-	nonceStr, err := utils.GenerateNonce()
-	if err != nil {
-		return nil, nil
-	}
-	res.NonceStr = nonceStr
-
-	// 订单详情扩展字符串
-	res.Package = "prepay_id=" + paymentId
-	// 签名方式
-	res.SignType = "RSA"
-
-	str := p.cfg.AppID + "\n" + res.TimeStamp + "\n" + res.NonceStr + "\n" + res.Package + "\n"
-	sign, err := utils.SignSHA256WithRSA(str, p.pk)
-	if err != nil {
-		return nil, err
-	}
-	res.PaySign = sign
-
-	return res, nil
-}
-
-func (p *WechatPay) CreateSub(ctx context.Context, args *CreateSubArgs) (res *CreateSubResult, err error) {
-	return nil, errors.New("not yet implemented")
-}
-
-func (p *WechatPay) QuerySub(ctx context.Context, args *QuerySubArgs) (*SubDetail, error) {
-	return nil, errors.New("not yet implemented")
-}
-
-func (p *WechatPay) Capture(ctx context.Context, orderID string, amount int32) (string, error) {
-	return "", errors.New("not yet implemented")
-}
-
-func (p *WechatPay) CreatePortal(ctx context.Context, args *CreatePortalArgs) (*CreatePortalResult, error) {
-	return nil, errors.New("not yet implemented")
 }
