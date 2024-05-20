@@ -12,6 +12,7 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/core/downloader"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/app"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/h5"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
@@ -19,6 +20,16 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
 	"net/http"
 	"time"
+)
+
+const (
+	WechatPayTradeStateSuccess      = "SUCCESS"    // 支付成功
+	WechatPayTradeStateRefund       = "REFUND"     // 转入退款
+	WechatPayTradeStateNotPay       = "NOTPAY"     // 未支付
+	WechatPayTradeStateClosed       = "CLOSED"     // 已关闭
+	WechatPayTradeStateRevoked      = "REVOKED"    // 已撤销(付款码支付)
+	WechatPayTradeStateUserPaying   = "USERPAYING" // 用户支付中(付款码支付)
+	WechatPayTradeStateUserPayError = "PAYERROR"   // 支付失败
 )
 
 type WechatPrepayReq struct {
@@ -46,6 +57,8 @@ type PrepayWithRequestPaymentResp struct {
 	Sign      string `json:"pay_sign,omitempty"`   // 签名值
 }
 
+type Transaction payments.Transaction
+
 type WechatPayConfig struct {
 	AppID           string // 应用ID
 	MchID           string // 直连商户号
@@ -55,6 +68,11 @@ type WechatPayConfig struct {
 	NotifyURL       string // 回调地址
 }
 
+type WechatNotifyResp struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 type WechatPay struct {
 	cfg *WechatPayConfig
 	aas *app.AppApiService       // app支付
@@ -62,6 +80,7 @@ type WechatPay struct {
 	jss *jsapi.JsapiApiService   // jsapi支付
 	nas *native.NativeApiService // native支付(扫码支付)
 	pk  *rsa.PrivateKey
+	nh  *notify.Handler
 }
 
 func NewWechatPay() (*WechatPay, error) {
@@ -98,42 +117,8 @@ func NewWechatPay() (*WechatPay, error) {
 		nas: &native.NativeApiService{Client: client},
 		pk:  key,
 	}
+	s.nh, err = s.newNotifyHandler()
 	return s, err
-}
-
-func (p *WechatPay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {
-	if args.Money <= 0 {
-		return nil, nil
-	}
-
-	res, err := p.Query(ctx, args.PayID)
-	if err != nil {
-		return nil, err
-	}
-
-	//s.logger.Infof("wechat verify: money: %d coupon: %d api res: %d", money, coupon, *res.Amount.Total)
-	if res.Status != "SUCCESS" || args.Money != res.Money {
-		return nil, errors.New("wechat pay verified failed")
-	}
-	return &VerifyRes{}, nil
-}
-
-func (p *WechatPay) Query(ctx context.Context, payId string) (*QueryResult, error) {
-	res := new(QueryResult)
-	req := jsapi.QueryOrderByOutTradeNoRequest{
-		OutTradeNo: core.String(payId),
-		Mchid:      core.String(p.cfg.MchID),
-	}
-	orderRes, _, err := p.jss.QueryOrderByOutTradeNo(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	res.Status = *orderRes.TradeState
-	res.Money = int32(*orderRes.Amount.Total)
-	if orderRes.TransactionId != nil {
-		res.OrderId = *orderRes.TransactionId
-	}
-	return res, err
 }
 
 // PrePay 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付。
@@ -264,12 +249,55 @@ func (p *WechatPay) prepayJsapi(ctx context.Context, req *WechatPrepayReq) (*Wec
 	}, nil
 }
 
-func (p *WechatPay) newNotifyHandler() (h *notify.Handler, err error) {
+// QueryOrderByID 根据订单号查询订单信息
+func (p *WechatPay) QueryOrderByID(ctx context.Context, id string) (*Transaction, error) {
+	resp, result, err := p.aas.QueryOrderById(ctx, app.QueryOrderByIdRequest{
+		TransactionId: core.String(id),
+		Mchid:         core.String(p.cfg.MchID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return (*Transaction)(resp), nil
+}
+
+// QueryOrderByOutTradeNo 根据商户内部订单号查询订单信息
+func (p *WechatPay) QueryOrderByOutTradeNo(ctx context.Context, id string) (*Transaction, error) {
+	resp, result, err := p.aas.QueryOrderByOutTradeNo(ctx, app.QueryOrderByOutTradeNoRequest{
+		OutTradeNo: core.String(id),
+		Mchid:      core.String(p.cfg.MchID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Response.StatusCode != http.StatusOK {
+		return nil, errors.New(result.Response.Status)
+	}
+	return (*Transaction)(resp), nil
+}
+
+// HandleNotify 处理回调通知
+func (p *WechatPay) HandleNotify(ctx context.Context, req *http.Request, handler func(t *Transaction) error) error {
+	// 解析请求
+	res := &Transaction{}
+	if _, err := p.nh.ParseNotifyRequest(ctx, req, res); err != nil {
+		return err
+	}
+	if err := handler(res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *WechatPay) newNotifyHandler() (*notify.Handler, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	// 注册下载器
-	err = downloader.MgrInstance().RegisterDownloaderWithPrivateKey(
+	err := downloader.MgrInstance().RegisterDownloaderWithPrivateKey(
 		ctx, p.pk, p.cfg.MchCertSerialNo, p.cfg.MchID, p.cfg.MchAPIv3Key,
 	)
 	if err != nil {
