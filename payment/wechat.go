@@ -23,6 +23,13 @@ import (
 )
 
 const (
+	WechatPayTypeApp    = "app"
+	WechatPayTypeH5     = "h5"
+	WechatPayTypeNative = "native"
+	WechatPayTypeJsapi  = "jsapi"
+)
+
+const (
 	WechatPayTradeStateSuccess      = "SUCCESS"    // 支付成功
 	WechatPayTradeStateRefund       = "REFUND"     // 转入退款
 	WechatPayTradeStateNotPay       = "NOTPAY"     // 未支付
@@ -122,31 +129,31 @@ func NewWechatPay() (*WechatPay, error) {
 }
 
 // PrePay 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付。
-func (p *WechatPay) PrePay(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
-	switch args.PayType {
-	case "app":
-		return p.prepayApp(ctx, args)
-	case "h5":
-		return p.prepayH5(ctx, args)
-	case "native":
-		return p.prepayNative(ctx, args)
-	case "jsapi":
-		return p.prepayJsapi(ctx, args)
+func (p *WechatPay) PrePay(ctx context.Context, req *WechatPrepayReq) (*WechatPrepayResp, error) {
+	switch req.PayType {
+	case WechatPayTypeApp:
+		return p.prepayApp(ctx, req)
+	case WechatPayTypeH5:
+		return p.prepayH5(ctx, req)
+	case WechatPayTypeNative:
+		return p.prepayNative(ctx, req)
+	case WechatPayTypeJsapi:
+		return p.prepayJsapi(ctx, req)
 	default:
-		return nil, fmt.Errorf("invalid paytype, payType:%s", args.PayType)
+		return nil, fmt.Errorf("invalid paytype, payType:%s", req.PayType)
 	}
 }
 
 // prepayApp 商户系统先调用该接口在微信支付服务后台生成预支付交易单，返回正确的预支付交易会话标识后再按Native、JSAPI、APP等不同场景生成交易串调起支付
-func (p *WechatPay) prepayApp(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
+func (p *WechatPay) prepayApp(ctx context.Context, req *WechatPrepayReq) (*WechatPrepayResp, error) {
 	prepayRequest := app.PrepayRequest{
 		Appid:       core.String(p.cfg.AppID),
 		Mchid:       core.String(p.cfg.MchID),
-		Description: core.String(args.Description),
-		OutTradeNo:  core.String(args.OutTradeNo),
+		Description: core.String(req.Description),
+		OutTradeNo:  core.String(req.OutTradeNo),
 		NotifyUrl:   core.String(p.cfg.NotifyURL),
 		Amount: &app.Amount{
-			Total: core.Int64(args.Amount),
+			Total: core.Int64(req.Amount),
 		},
 	}
 	resp, result, err := p.aas.PrepayWithRequestPayment(ctx, prepayRequest)
@@ -171,15 +178,15 @@ func (p *WechatPay) prepayApp(ctx context.Context, args *WechatPrepayReq) (*Wech
 }
 
 // prepayH5 拉起微信支付收银台的中间页面，可通过访问该URL来拉起微信客户端，完成支付，h5_url的有效期为5分钟
-func (p *WechatPay) prepayH5(ctx context.Context, args *WechatPrepayReq) (*WechatPrepayResp, error) {
+func (p *WechatPay) prepayH5(ctx context.Context, req *WechatPrepayReq) (*WechatPrepayResp, error) {
 	prepayRequest := h5.PrepayRequest{
 		Appid:       core.String(p.cfg.AppID),
 		Mchid:       core.String(p.cfg.MchID),
-		Description: core.String(args.Description),
-		OutTradeNo:  core.String(args.OutTradeNo),
+		Description: core.String(req.Description),
+		OutTradeNo:  core.String(req.OutTradeNo),
 		NotifyUrl:   core.String(p.cfg.NotifyURL),
 		Amount: &h5.Amount{
-			Total: core.Int64(args.Amount),
+			Total: core.Int64(req.Amount),
 		},
 	}
 	resp, result, err := p.has.Prepay(ctx, prepayRequest)
@@ -265,9 +272,9 @@ func (p *WechatPay) QueryOrderByID(ctx context.Context, id string) (*Transaction
 }
 
 // QueryOrderByOutTradeNo 根据商户内部订单号查询订单信息
-func (p *WechatPay) QueryOrderByOutTradeNo(ctx context.Context, id string) (*Transaction, error) {
+func (p *WechatPay) QueryOrderByOutTradeNo(ctx context.Context, outTradeNo string) (*Transaction, error) {
 	resp, result, err := p.aas.QueryOrderByOutTradeNo(ctx, app.QueryOrderByOutTradeNoRequest{
-		OutTradeNo: core.String(id),
+		OutTradeNo: core.String(outTradeNo),
 		Mchid:      core.String(p.cfg.MchID),
 	})
 	if err != nil {
