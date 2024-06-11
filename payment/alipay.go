@@ -3,6 +3,7 @@ package pay
 import (
 	"github.com/dmzlingyin/utils/config"
 	"github.com/smartwalle/alipay/v3"
+	"net/url"
 )
 
 type AliPayReq struct {
@@ -10,6 +11,12 @@ type AliPayReq struct {
 	Amount     string `json:"amount"`       // 订单金额(元)
 	Subject    string `json:"subject"`      // 订单标题
 	NotifyURL  string `json:"notify_url"`   // 支付宝异步通知地址
+}
+
+type AlipayNotification struct {
+	OutTradeNo  string `json:"out_trade_no"`
+	TradeStatus string `json:"trade_status"`
+	TotalAmount string `json:"total_amount"`
 }
 
 type Alipay struct {
@@ -36,4 +43,16 @@ func (p *Alipay) Pay(req *AliPayReq) (string, error) {
 		OutTradeNo:  req.OutTradeNo,
 		TotalAmount: req.Amount,
 	}})
+}
+
+func (p *Alipay) ParseNotify(value url.Values) (*AlipayNotification, error) {
+	res, err := p.client.DecodeNotification(value)
+	if err != nil {
+		return nil, err
+	}
+	return &AlipayNotification{
+		OutTradeNo:  res.OutTradeNo,
+		TradeStatus: string(res.TradeStatus),
+		TotalAmount: res.TotalAmount,
+	}, nil
 }
