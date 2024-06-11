@@ -19,6 +19,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/plutov/paypal/v4 v4.7.1
 	github.com/redis/go-redis/v9 v9.5.1
+	github.com/smartwalle/alipay/v3 v3.2.21
 	github.com/spf13/cast v1.6.0
 	github.com/stripe/stripe-go/v74 v74.30.0
 	github.com/tidwall/gjson v1.17.1
@@ -79,6 +80,9 @@ require (
 	github.com/montanaflynn/stats v0.6.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
+	github.com/smartwalle/ncrypto v1.0.4 // indirect
+	github.com/smartwalle/ngx v1.0.9 // indirect
+	github.com/smartwalle/nsign v1.0.9 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect

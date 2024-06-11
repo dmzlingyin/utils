@@ -17,6 +17,12 @@
       "mch_api_v3_key": "xxx",
       "private_key_path": "config/key.pem",
       "notify_url": "https://test.cn/notify"
+    },
+    "alipay": {
+      "app_id": "xxx",
+      "private_key": "xxx",
+      "is_production": false,
+      "notify_url": ""
     }
   }
 }
