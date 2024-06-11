@@ -19,8 +19,9 @@
       "notify_url": "https://test.cn/notify"
     },
     "alipay": {
-      "app_id": "xxx",
-      "private_key": "xxx",
+      "app_id": "",
+      "private_key": "",
+      "public_key": "",
       "is_production": false,
       "notify_url": ""
     }

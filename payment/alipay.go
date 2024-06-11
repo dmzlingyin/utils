@@ -26,9 +26,13 @@ type Alipay struct {
 func NewAlipay() (*Alipay, error) {
 	appID := config.GetString("pay.alipay.app_id")
 	privateKey := config.GetString("pay.alipay.private_key")
+	publicKey := config.GetString("pay.alipay.public_key")
 	isProduction := config.GetBool("pay.alipay.is_production")
 	client, err := alipay.New(appID, privateKey, isProduction)
 	if err != nil {
+		return nil, err
+	}
+	if err = client.LoadAliPayPublicKey(publicKey); err != nil {
 		return nil, err
 	}
 	return &Alipay{
