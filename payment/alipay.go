@@ -1,6 +1,7 @@
 package pay
 
 import (
+	"context"
 	"github.com/dmzlingyin/utils/config"
 	"github.com/smartwalle/alipay/v3"
 	"net/url"
@@ -11,13 +12,13 @@ type AliPayReq struct {
 	Amount     string `json:"amount"`       // 订单金额(元)
 	Subject    string `json:"subject"`      // 订单标题
 	NotifyURL  string `json:"notify_url"`   // 支付宝异步通知地址
+	ReturnURL  string `json:"return_url"`
 }
 
-type AlipayNotification struct {
-	OutTradeNo  string `json:"out_trade_no"`
-	TradeStatus string `json:"trade_status"`
-	TotalAmount string `json:"total_amount"`
-}
+type (
+	QueryRes           alipay.TradeQueryRsp
+	AlipayNotification alipay.Notification
+)
 
 type Alipay struct {
 	client *alipay.Client
@@ -43,10 +44,19 @@ func NewAlipay() (*Alipay, error) {
 func (p *Alipay) Pay(req *AliPayReq) (string, error) {
 	return p.client.TradeAppPay(alipay.TradeAppPay{Trade: alipay.Trade{
 		NotifyURL:   req.NotifyURL,
+		ReturnURL:   req.ReturnURL,
 		Subject:     req.Subject,
 		OutTradeNo:  req.OutTradeNo,
 		TotalAmount: req.Amount,
 	}})
+}
+
+func (p *Alipay) Query(ctx context.Context, outTradeNo string) (*QueryRes, error) {
+	res, err := p.client.TradeQuery(ctx, alipay.TradeQuery{OutTradeNo: outTradeNo})
+	if err != nil {
+		return nil, err
+	}
+	return (*QueryRes)(res), nil
 }
 
 func (p *Alipay) ParseNotify(value url.Values) (*AlipayNotification, error) {
@@ -54,9 +64,5 @@ func (p *Alipay) ParseNotify(value url.Values) (*AlipayNotification, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AlipayNotification{
-		OutTradeNo:  res.OutTradeNo,
-		TradeStatus: string(res.TradeStatus),
-		TotalAmount: res.TotalAmount,
-	}, nil
+	return (*AlipayNotification)(res), nil
 }
