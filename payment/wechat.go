@@ -3,7 +3,6 @@ package pay
 import (
 	"context"
 	"crypto/rsa"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/dmzlingyin/utils/config"
@@ -100,9 +99,8 @@ func NewWechatPay() (*WechatPay, error) {
 		NotifyURL:       config.GetString("pay.wechat.notify_url"),
 	}
 
-	privateKey, err := base64.StdEncoding.DecodeString(cfg.PrivateKeyPath)
 	// 加载私钥
-	key, err := utils.LoadPrivateKey(string(privateKey))
+	key, err := utils.LoadPrivateKeyWithPath(cfg.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}
