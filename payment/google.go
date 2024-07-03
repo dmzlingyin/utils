@@ -16,14 +16,10 @@ type GooglePay struct {
 	options map[string]string
 }
 
-func newGooglePay(options map[string]string) *GooglePay {
+func NewGooglePay(options map[string]string) *GooglePay {
 	return &GooglePay{
 		options: options,
 	}
-}
-
-func (p *GooglePay) GetChannel() string {
-	return ChannelGoogle
 }
 
 func (p *GooglePay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {
@@ -92,22 +88,6 @@ func (p *GooglePay) GetKey(ctx context.Context) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(p.options["json_key"])
 }
 
-func (p *GooglePay) Query(ctx context.Context, orderID string) (res *QueryResult, err error) {
-	return nil, errors.New("not yet implemented")
-}
-
-func (p *GooglePay) CreateSub(ctx context.Context, args *CreateSubArgs) (res *CreateSubResult, err error) {
-	return nil, errors.New("not yet implemented")
-}
-
-func (p *GooglePay) QuerySub(ctx context.Context, args *QuerySubArgs) (*SubDetail, error) {
-	return nil, errors.New("not yet implemented")
-}
-
-func (p *GooglePay) Capture(ctx context.Context, orderID string, amount int32) (string, error) {
-	return "", errors.New("not yet implemented")
-}
-
 func (p *GooglePay) getSubTime(sp *androidpublisher.SubscriptionPurchaseV2) (startTime, expiryTime time.Time) {
 	var err error
 	purchaseItem := sp.LineItems[0]
@@ -120,8 +100,4 @@ func (p *GooglePay) getSubTime(sp *androidpublisher.SubscriptionPurchaseV2) (sta
 		log.Errorf("parse google's expiryTime error: %s", err)
 	}
 	return
-}
-
-func (p *GooglePay) CreatePortal(ctx context.Context, args *CreatePortalArgs) (*CreatePortalResult, error) {
-	return nil, errors.New("not yet implemented")
 }

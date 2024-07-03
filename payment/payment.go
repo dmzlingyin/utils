@@ -1,15 +1,12 @@
 package pay
 
 import (
-	"sync"
 	"time"
 )
 
 const (
 	ChannelApple    = "apple"
-	ChannelGoogle   = "google"
 	ChannelPaypal   = "paypal"
-	ChannelWechat   = "wechat"
 	ChannelDouyin   = "douyin"
 	ChannelKuaishou = "kuaishou"
 	ChannelStripe   = "stripe"
@@ -17,8 +14,6 @@ const (
 
 // 各个平台的Option字段
 const (
-	// apple
-	OptionPassword = "password"
 	// google
 	OptionPkgName = "package_name"
 	// paypal
@@ -26,13 +21,9 @@ const (
 	OptionSecretId = "secret_id"
 	OptionSandbox  = "sandbox"
 	// WeChat
-	OptionAppId           = "app_id"
-	OptionMchId           = "mch_id"
-	OptionMchCertSerialNo = "mch_cert_serial_no"
-	OptionMchAPIv3Key     = "mch_api_v3_key"
-	OptionPrivateKey      = "private_key"
-	OptionNotifyURL       = "notify_url"
-	OptionPayType         = "pay_type"
+	OptionAppId     = "app_id"
+	OptionMchId     = "mch_id"
+	OptionNotifyURL = "notify_url"
 	// douyin
 	OptionSecret = "app_secret"
 	OptionSalt   = "salt"
@@ -47,16 +38,6 @@ type UpdateStatusArgs struct {
 	Money      int32  `json:"money,omitempty"` // 支付金额
 	OutOrderId string `json:"outOrderId"`      // 商户订单号
 }
-
-type UpdateBizArgs struct {
-	BizID      string `json:"bizId"` // 业务系统ID
-	CustomerID string `json:"customerId"`
-	PaymentID  string `json:"paymentId"` // 第三方平台ID
-	Status     int32  `json:"status"`
-	Money      int32  `json:"money,omitempty"` // 支付金额
-}
-
-var cache sync.Map
 
 type VerifyArgs struct {
 	Kind      string // payment/subscription (普通支付/订阅支付)
