@@ -67,19 +67,19 @@ func (w *wechat) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, 
 	if wResp.ErrCode != 0 {
 		return nil, nil, errors.New(wResp.ErrMsg)
 	}
-
-	phone, err := w.getPhoneNumber(args.PCode)
-	if err != nil {
-		return nil, nil, err
-	}
 	user := &User{
-		ID:    wResp.OpenId,
-		Phone: phone,
+		ID: wResp.OpenId,
+	}
+
+	if args.PCode != "" {
+		user.Phone, err = w.getPhoneNumber(args.PCode)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	token := &oauth2.Token{
 		Expiry: time.Now().Add(time.Hour * 24),
 	}
-
 	return token, user, nil
 }
 
