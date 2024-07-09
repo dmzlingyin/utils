@@ -24,7 +24,7 @@ require (
 	github.com/stripe/stripe-go/v74 v74.30.0
 	github.com/tidwall/gjson v1.17.1
 	github.com/wechatpay-apiv3/wechatpay-go v0.2.18
-	go.mongodb.org/mongo-driver v1.15.0
+	go.mongodb.org/mongo-driver v1.13.1
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
 	golang.org/x/oauth2 v0.20.0
 	google.golang.org/api v0.180.0
