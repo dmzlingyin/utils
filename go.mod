@@ -25,7 +25,7 @@ require (
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.54
 	github.com/tidwall/gjson v1.17.1
 	github.com/wechatpay-apiv3/wechatpay-go v0.2.18
-	go.mongodb.org/mongo-driver v1.13.1
+	go.mongodb.org/mongo-driver v1.16.0
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
 	golang.org/x/oauth2 v0.20.0
 	google.golang.org/api v0.180.0
@@ -81,7 +81,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/montanaflynn/stats v0.6.6 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/mozillazg/go-httpheader v0.2.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
