@@ -93,7 +93,7 @@ func (c *Container) call(t reflect.Type, v reflect.Value) ([]reflect.Value, erro
 
 func (c *Container) get(t reflect.Type) (any, error) {
 	if s := c.types[t]; s != nil {
-		return s.build(c)
+		return s.new()
 	}
 	return nil, errors.New("cannot get service: " + t.Name())
 }
