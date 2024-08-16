@@ -22,6 +22,9 @@ require (
 	github.com/smartwalle/alipay/v3 v3.2.21
 	github.com/spf13/cast v1.6.0
 	github.com/stripe/stripe-go/v74 v74.30.0
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.984
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ses v1.0.984
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.984
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.54
 	github.com/tidwall/gjson v1.17.1
 	github.com/wechatpay-apiv3/wechatpay-go v0.2.18

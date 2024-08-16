@@ -25,5 +25,22 @@
       "is_production": false,
       "notify_url": ""
     }
+  },
+  "tencent": {
+    "ses": {
+      "secret_id": "",
+      "secret_key": "",
+      "region": "",
+      "from_email_address": "",
+      "template_id": 123456
+    },
+    "sms": {
+      "secret_id": "",
+      "secret_key": "",
+      "region": "",
+      "sdk_app_id": "",
+      "sign_name": "",
+      "template_id": ""
+    }
   }
 }
