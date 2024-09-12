@@ -43,3 +43,46 @@ func TestCast(t *testing.T) {
 		t.Error("ToString failed")
 	}
 }
+
+func TestStructToMap(t *testing.T) {
+	var person = struct {
+		Name string `map:"name"`
+		Age  int32
+	}{
+		Name: "alice",
+		Age:  13,
+	}
+
+	m, err := StructToMap(person)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(m)
+}
+
+func TestMapToStruct(t *testing.T) {
+	var person struct {
+		Name string `map:"name"`
+		Age  int32
+	}
+	m1 := map[string]any{
+		"name": "alice",
+		"age":  13,
+	}
+
+	err := MapToStruct(m1, &person)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(person)
+
+	m2 := map[string]any{
+		"name": "bob",
+		"Age":  18,
+	}
+	err = MapToStruct(m2, &person)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(person)
+}

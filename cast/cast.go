@@ -1,7 +1,9 @@
 package cast
 
 import (
+	"fmt"
 	"github.com/spf13/cast"
+	"reflect"
 	"time"
 )
 
@@ -136,4 +138,91 @@ func ToString(v any, d ...string) string {
 		return d[0]
 	}
 	return val
+}
+
+// StructToMap 将结构体转换为map，并根据tag设定map的key值
+func StructToMap(in any) (map[string]any, error) {
+	v := reflect.ValueOf(in)
+	if v.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("input is not a struct")
+	}
+
+	result := make(map[string]interface{})
+
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		fieldType := t.Field(i)
+
+		tag := fieldType.Tag.Get("map")
+		if tag == "" {
+			tag = fieldType.Name
+		}
+		result[tag] = fieldValue.Interface()
+	}
+
+	return result, nil
+}
+
+// MapToStruct 将map转换为结构体，并根据tag设定字段值
+func MapToStruct(m map[string]any, out any) error {
+	v := reflect.ValueOf(out)
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("output is not a pointer to a struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		fieldType := t.Field(i)
+
+		tag := fieldType.Tag.Get("map")
+		if tag == "" {
+			tag = fieldType.Name
+		}
+		if mapValue, ok := m[tag]; ok {
+			convertedValue, err := convertValue(mapValue, fieldValue.Type())
+			if err == nil && fieldValue.CanSet() {
+				fieldValue.Set(convertedValue)
+			}
+		}
+	}
+
+	return nil
+}
+
+// convertValue 将map中的值转换为struct字段的类型
+func convertValue(value any, targetType reflect.Type) (reflect.Value, error) {
+	val := reflect.ValueOf(value)
+	valType := val.Type()
+
+	if valType.AssignableTo(targetType) {
+		return val, nil
+	}
+
+	// 处理基本类型的转换
+	switch targetType.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if valType.Kind() >= reflect.Int && valType.Kind() <= reflect.Int64 {
+			return reflect.ValueOf(val.Convert(targetType).Interface()), nil
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if valType.Kind() >= reflect.Uint && valType.Kind() <= reflect.Uint64 {
+			return reflect.ValueOf(val.Convert(targetType).Interface()), nil
+		}
+	case reflect.Float32, reflect.Float64:
+		if valType.Kind() == reflect.Float32 || valType.Kind() == reflect.Float64 {
+			return reflect.ValueOf(val.Convert(targetType).Interface()), nil
+		}
+	case reflect.String:
+		if valType.Kind() == reflect.String {
+			return val, nil
+		}
+	default:
+		return val, fmt.Errorf("unsupported type")
+	}
+
+	return reflect.Value{}, fmt.Errorf("cannot convert %v to %v", valType, targetType)
 }
