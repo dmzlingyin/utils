@@ -1,6 +1,7 @@
 package cast
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cast"
 	"reflect"
@@ -143,12 +144,23 @@ func ToString(v any, d ...string) string {
 // StructToMap 将结构体转换为map，并根据tag设定map的key值
 func StructToMap(in any) (map[string]any, error) {
 	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
 	if v.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("input is not a struct")
+		return nil, errors.New("not supported non struct type")
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
+	err := structToMap(v, result)
+	if err != nil {
+		return nil, err
+	}
 
+	return result, nil
+}
+
+func structToMap(v reflect.Value, result map[string]any) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
@@ -158,17 +170,34 @@ func StructToMap(in any) (map[string]any, error) {
 		if tag == "" {
 			tag = fieldType.Name
 		}
-		result[tag] = fieldValue.Interface()
+
+		if fieldValue.Kind() == reflect.Ptr {
+			if fieldValue.IsNil() {
+				continue
+			}
+			fieldValue = fieldValue.Elem()
+		}
+
+		if fieldValue.Kind() == reflect.Struct {
+			nestedResult := make(map[string]any)
+			if err := structToMap(fieldValue, nestedResult); err != nil {
+				return err
+			}
+			result[tag] = nestedResult
+		} else {
+			result[tag] = fieldValue.Interface()
+		}
 	}
 
-	return result, nil
+	return nil
 }
 
 // MapToStruct 将map转换为结构体，并根据tag设定字段值
 func MapToStruct(m map[string]any, out any) error {
 	v := reflect.ValueOf(out)
+	// 确保输出是一个指针
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("output is not a pointer to a struct")
+		return errors.New("output is not a pointer to a struct")
 	}
 
 	v = v.Elem()
@@ -195,9 +224,12 @@ func MapToStruct(m map[string]any, out any) error {
 
 // convertValue 将map中的值转换为struct字段的类型
 func convertValue(value any, targetType reflect.Type) (reflect.Value, error) {
+	if value == nil {
+		return reflect.Zero(targetType), nil
+	}
+
 	val := reflect.ValueOf(value)
 	valType := val.Type()
-
 	if valType.AssignableTo(targetType) {
 		return val, nil
 	}
@@ -220,8 +252,29 @@ func convertValue(value any, targetType reflect.Type) (reflect.Value, error) {
 		if valType.Kind() == reflect.String {
 			return val, nil
 		}
+	case reflect.Struct:
+		if valType.Kind() == reflect.Map {
+			nestedStruct := reflect.New(targetType).Elem()
+			err := MapToStruct(value.(map[string]any), nestedStruct.Addr().Interface())
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return nestedStruct, nil
+		}
+	case reflect.Ptr:
+		if valType.Kind() == reflect.Map {
+			elemType := targetType.Elem()
+			nestedStruct := reflect.New(elemType).Elem()
+			err := MapToStruct(value.(map[string]any), nestedStruct.Addr().Interface())
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			ptr := reflect.New(elemType)
+			ptr.Elem().Set(nestedStruct)
+			return ptr, nil
+		}
 	default:
-		return val, fmt.Errorf("unsupported type")
+		return val, errors.New("unsupported type")
 	}
 
 	return reflect.Value{}, fmt.Errorf("cannot convert %v to %v", valType, targetType)
