@@ -2,6 +2,7 @@ package sms
 
 import (
 	Error "errors"
+	"fmt"
 	"github.com/dmzlingyin/utils/config"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -16,10 +17,14 @@ type Sms struct {
 	templateID string
 }
 
-func New() *Sms {
-	secretID := config.GetString("tencent.sms.secret_id")
-	secretKey := config.GetString("tencent.sms.secret_key")
-	region := config.GetString("tencent.sms.region")
+func New(keys ...string) *Sms {
+	key := "sms"
+	if len(keys) > 0 {
+		key = keys[0]
+	}
+	secretID := config.GetString(fmt.Sprintf("tencent.%s.secret_id", key))
+	secretKey := config.GetString(fmt.Sprintf("tencent.%s.secret_key", key))
+	region := config.GetString(fmt.Sprintf("tencent.%s.region", key))
 
 	credential := common.NewCredential(secretID, secretKey)
 	client, err := sms.NewClient(credential, region, profile.NewClientProfile())
@@ -28,9 +33,9 @@ func New() *Sms {
 	}
 	return &Sms{
 		client:     client,
-		sdkAppID:   config.GetString("tencent.sms.sdk_app_id"),
-		signName:   config.GetString("tencent.sms.sign_name"),
-		templateID: config.GetString("tencent.sms.template_id"),
+		sdkAppID:   config.GetString(fmt.Sprintf("tencent.%s.sdk_app_id", key)),
+		signName:   config.GetString(fmt.Sprintf("tencent.%s.sign_name", key)),
+		templateID: config.GetString(fmt.Sprintf("tencent.%s.template_id", key)),
 	}
 }
 
