@@ -4,7 +4,6 @@ import (
 	Error "errors"
 	"github.com/dmzlingyin/utils/config"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 )
@@ -43,9 +42,20 @@ func (s *Sms) Send(phone, captcha string) error {
 	request.TemplateParamSet = common.StringPtrs([]string{captcha})
 	request.PhoneNumberSet = common.StringPtrs([]string{phone})
 
-	_, err := s.client.SendSms(request)
-	if v, ok := err.(*errors.TencentCloudSDKError); ok {
-		return Error.New(v.Message)
+	res, err := s.client.SendSms(request)
+	if err != nil {
+		return err
 	}
-	return err
+	if res == nil {
+		return Error.New("短信发送失败")
+	}
+	if len(res.Response.SendStatusSet) <= 0 {
+		return Error.New("短信发送失败")
+	}
+
+	ok := "Ok"
+	if res.Response.SendStatusSet[0].Code != &ok {
+		return Error.New(*res.Response.SendStatusSet[0].Message)
+	}
+	return nil
 }
