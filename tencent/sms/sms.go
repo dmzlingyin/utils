@@ -58,8 +58,7 @@ func (s *Sms) Send(phone, captcha string) error {
 		return Error.New("短信发送失败")
 	}
 
-	ok := "Ok"
-	if res.Response.SendStatusSet[0].Code != &ok {
+	if *res.Response.SendStatusSet[0].Code != "Ok" {
 		return Error.New(*res.Response.SendStatusSet[0].Message)
 	}
 	return nil
