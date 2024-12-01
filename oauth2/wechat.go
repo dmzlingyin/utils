@@ -50,7 +50,7 @@ type wechat struct {
 }
 
 func (w *wechat) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, *User, error) {
-	url := "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
+	url := "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code"
 	url = fmt.Sprintf(url, w.appid, w.secret, args.Code)
 
 	resp, err := http.Get(url)
@@ -71,12 +71,6 @@ func (w *wechat) Authorize(ctx context.Context, args *AuthArgs) (*oauth2.Token, 
 		ID: wResp.OpenId,
 	}
 
-	if args.PCode != "" {
-		user.Phone, err = w.getPhoneNumber(args.PCode)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
 	token := &oauth2.Token{
 		Expiry: time.Now().Add(time.Hour * 24),
 	}

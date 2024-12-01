@@ -42,5 +42,11 @@
       "sign_name": "",
       "template_id": ""
     }
+  },
+  "oauth2": {
+    "wechat": {
+      "app_id": "",
+      "app_secret": ""
+    }
   }
 }
