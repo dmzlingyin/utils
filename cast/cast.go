@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/spf13/cast"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -166,9 +167,22 @@ func structToMap(v reflect.Value, result map[string]any) error {
 		fieldValue := v.Field(i)
 		fieldType := t.Field(i)
 
+		// 处理匿名字段（组合结构体）
+		if fieldType.Anonymous {
+			if err := structToMap(fieldValue, result); err != nil {
+				return err
+			}
+			continue
+		}
+
 		tag := fieldType.Tag.Get("map")
-		if tag == "" {
-			tag = fieldType.Name
+		if tag == "" || tag == "-" {
+			continue
+		}
+		omitempty := false
+		if items := strings.Split(tag, ","); len(items) == 2 {
+			tag = items[0]
+			omitempty = items[1] == "omitempty"
 		}
 
 		if fieldValue.Kind() == reflect.Ptr {
@@ -177,14 +191,51 @@ func structToMap(v reflect.Value, result map[string]any) error {
 			}
 			fieldValue = fieldValue.Elem()
 		}
+		if omitempty && fieldValue.IsZero() {
+			continue
+		}
 
-		if fieldValue.Kind() == reflect.Struct {
+		switch fieldValue.Kind() {
+		case reflect.Struct:
 			nestedResult := make(map[string]any)
 			if err := structToMap(fieldValue, nestedResult); err != nil {
 				return err
 			}
+			if omitempty && len(nestedResult) <= 0 {
+				continue
+			}
 			result[tag] = nestedResult
-		} else {
+		case reflect.Map:
+			mapResult := make(map[string]any)
+			for _, key := range fieldValue.MapKeys() {
+				mapValue := fieldValue.MapIndex(key)
+				if mapValue.Kind() == reflect.Ptr && mapValue.IsNil() {
+					continue
+				}
+				if mapValue.Kind() == reflect.Ptr {
+					mapValue = mapValue.Elem()
+				}
+				if omitempty && mapValue.IsZero() {
+					continue
+				}
+				if mapValue.Kind() == reflect.Struct {
+					nestedMapResult := make(map[string]any)
+					if err := structToMap(mapValue, nestedMapResult); err != nil {
+						return err
+					}
+					if omitempty && len(nestedMapResult) <= 0 {
+						continue
+					}
+					mapResult[key.String()] = nestedMapResult
+				} else {
+					mapResult[key.String()] = mapValue.Interface()
+				}
+			}
+			if omitempty && len(mapResult) <= 0 {
+				continue
+			}
+			result[tag] = mapResult
+		default:
 			result[tag] = fieldValue.Interface()
 		}
 	}

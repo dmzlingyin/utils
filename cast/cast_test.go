@@ -46,8 +46,9 @@ func TestCast(t *testing.T) {
 
 func TestStructToMap(t *testing.T) {
 	var person = struct {
-		Name string `map:"name"`
-		Age  int32
+		Name    string `map:"name"`
+		Age     int32
+		Address string `map:"address,omitempty"`
 	}{
 		Name: "alice",
 		Age:  13,
