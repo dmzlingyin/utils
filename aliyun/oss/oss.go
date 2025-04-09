@@ -6,6 +6,7 @@ import (
 	"github.com/dmzlingyin/utils/config"
 	"github.com/google/uuid"
 	"strconv"
+	"time"
 
 	"io"
 	"net/http"
@@ -117,17 +118,17 @@ func (c *Client) PutObject(name string, reader io.Reader) error {
 }
 
 // PutURLObject 将网络资源上传到oss
-func (c *Client) PutURLObject(url string) (string, error) {
+func (c *Client) PutURLObject(url, name string) (string, error) {
 	res, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}
 	defer res.Body.Close()
 
-	name := uuid.NewString() + path.Ext(url)
-	objectName := path.Join(c.tmpDir, name)
-
-	return objectName, c.bucket.PutObject(objectName, io.Reader(res.Body))
+	if name == "" {
+		name = path.Join(c.tmpDir, time.Now().Format("20060102"), uuid.NewString()+path.Ext(url))
+	}
+	return name, c.bucket.PutObject(name, io.Reader(res.Body))
 }
 
 // GetObject 获取资源
