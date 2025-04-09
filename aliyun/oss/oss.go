@@ -72,7 +72,7 @@ func (c *Client) Copy(src, dst string) error {
 	}
 
 	if isURL(src) {
-		objectName, err := c.PutURLObject(src)
+		objectName, err := c.PutURLObject(src, "")
 		if err != nil {
 			return err
 		}
