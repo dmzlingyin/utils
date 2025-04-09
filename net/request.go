@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dmzlingyin/utils/backoff"
 	"io"
 	"net/http"
@@ -31,7 +32,7 @@ func Request[T any](method, url string, headers map[string]string, body []byte) 
 
 		if response.StatusCode != http.StatusOK {
 			info, _ := io.ReadAll(response.Body)
-			return errors.New(string(info))
+			return errors.New(fmt.Sprintf("%s(%d)", string(info), response.StatusCode))
 		}
 		return json.NewDecoder(response.Body).Decode(&res)
 	})
