@@ -1,55 +1,102 @@
-package pay
+package payment
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"github.com/awa/go-iap/appstore"
+	"github.com/awa/go-iap/appstore/api"
 	"github.com/dmzlingyin/utils/config"
+	"os"
+	"time"
 )
 
+type VerifyApplePayArgs struct {
+	TransactionID string
+}
+
+type VerifyApplePayRes struct {
+	Sandbox       bool      // 是否为沙盒环境
+	TransactionID string    // 交易ID
+	ProductID     string    // 产品ID
+	StartTime     time.Time // 订阅开始时间
+	ExpiryTime    time.Time // 订阅到期时间
+}
+
+type ApplePayNotification struct {
+	Type                  string    `map:"type"`
+	UUID                  string    `map:"uuid"`
+	TransactionID         string    `map:"tran_id"`
+	OriginalTransactionID string    `map:"org_tran_id"`
+	ProductID             string    `map:"product_id"`
+	StartTime             time.Time `map:"start"`
+	ExpiryTime            time.Time `map:"expiry"`
+	Sandbox               bool      `map:"sandbox"`
+}
+
 type ApplePay struct {
-	password string
+	apiClient      *api.StoreClient
+	appstoreClient *appstore.Client
 }
 
-func NewApplePay() *ApplePay {
-	return &ApplePay{
-		password: config.GetString("pay.apple.password"),
-	}
-}
-
-func (p *ApplePay) GetChannel() string {
-	return ChannelApple
-}
-
-func (p *ApplePay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {
-	req := appstore.IAPRequest{
-		ReceiptData: args.Receipt,
-		Password:    p.password,
-	}
-	res := &appstore.IAPResponse{}
-	err := appstore.New().Verify(ctx, req, res)
+func NewApplePay() (*ApplePay, error) {
+	key, err := os.ReadFile("config/apple.p8")
 	if err != nil {
 		return nil, err
 	}
+	cfg := &api.StoreConfig{
+		KeyContent: key,
+		KeyID:      config.GetString("pay.apple.key_id"),
+		BundleID:   config.GetString("pay.apple.bundle_id"),
+		Issuer:     config.GetString("pay.apple.issuer"),
+	}
+	return &ApplePay{
+		apiClient:      api.NewStoreClient(cfg),
+		appstoreClient: appstore.New(),
+	}, nil
+}
 
-	// 验证订单状态
-	if res.Status != 0 {
-		return nil, errors.New("invalid pay status")
+func (a *ApplePay) Verify(ctx context.Context, args *VerifyApplePayArgs) (*VerifyApplePayRes, error) {
+	rsp, err := a.apiClient.GetTransactionInfo(ctx, args.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	transaction, err := a.apiClient.ParseSignedTransaction(rsp.SignedTransactionInfo)
+	if err != nil {
+		return nil, err
+	}
+	// 包装结果
+	return &VerifyApplePayRes{
+		Sandbox:       transaction.Environment == api.Sandbox,
+		TransactionID: transaction.TransactionID,
+		ProductID:     transaction.ProductID,
+		StartTime:     time.UnixMilli(transaction.PurchaseDate),
+		ExpiryTime:    time.UnixMilli(transaction.ExpiresDate),
+	}, nil
+}
+
+func (a *ApplePay) ParseNotify(ctx context.Context, body []byte) (*ApplePayNotification, error) {
+	var signedPayload appstore.SubscriptionNotificationV2SignedPayload
+	if err := json.Unmarshal(body, &signedPayload); err != nil {
+		return nil, err
 	}
 
-	// 验证产品ID
-	ok := false
-	for _, v := range res.Receipt.InApp {
-		if args.ProductID != v.ProductID {
-			continue
-		}
-		if args.PayID == v.TransactionID {
-			ok = true
-			break
-		}
+	np := appstore.SubscriptionNotificationV2DecodedPayload{}
+	if err := a.appstoreClient.ParseNotificationV2WithClaim(signedPayload.SignedPayload, &np); err != nil {
+		return nil, err
 	}
-	if !ok {
-		err = errors.New("can not get receipt attributes, invalid pay id: " + args.PayID)
+	tp := appstore.JWSTransactionDecodedPayload{}
+	if err := a.appstoreClient.ParseNotificationV2WithClaim(string(np.Data.SignedTransactionInfo), &tp); err != nil {
+		return nil, err
 	}
-	return &VerifyRes{Sandbox: res.Environment == "Sandbox"}, err
+
+	return &ApplePayNotification{
+		Type:                  string(np.NotificationType),
+		UUID:                  np.NotificationUUID,
+		TransactionID:         tp.TransactionId,
+		OriginalTransactionID: tp.OriginalTransactionId,
+		ProductID:             tp.ProductId,
+		StartTime:             time.UnixMilli(tp.PurchaseDate),
+		ExpiryTime:            time.UnixMilli(tp.ExpiresDate),
+		Sandbox:               tp.Environment == appstore.Sandbox,
+	}, nil
 }

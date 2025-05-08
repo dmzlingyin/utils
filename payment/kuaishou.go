@@ -1,4 +1,4 @@
-package pay
+package payment
 
 import (
 	"bytes"
@@ -56,10 +56,6 @@ func newKuaishouPay(options map[string]string) (*KuaishouPay, error) {
 		return nil, err
 	}
 	return ks, nil
-}
-
-func (p *KuaishouPay) GetChannel() string {
-	return ChannelKuaishou
 }
 
 func (p *KuaishouPay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {

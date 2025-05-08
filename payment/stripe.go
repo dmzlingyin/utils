@@ -1,4 +1,4 @@
-package pay
+package payment
 
 import (
 	"context"
@@ -19,10 +19,6 @@ func newStripePay(options map[string]string) (*StripePay, error) {
 		cancelURL: options["cancel_url"],
 	}
 	return pay, nil
-}
-
-func (p *StripePay) GetChannel() string {
-	return ChannelStripe
 }
 
 func (p *StripePay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {

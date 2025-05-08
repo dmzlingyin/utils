@@ -1,15 +1,7 @@
-package pay
+package payment
 
 import (
 	"time"
-)
-
-const (
-	ChannelApple    = "apple"
-	ChannelPaypal   = "paypal"
-	ChannelDouyin   = "douyin"
-	ChannelKuaishou = "kuaishou"
-	ChannelStripe   = "stripe"
 )
 
 // 各个平台的Option字段
@@ -85,16 +77,16 @@ type CreateSubArgs struct {
 	AllowPromotionCodes bool      // 是否开启 stripe 促销码
 }
 
-type QuerySubArgs struct {
-	SubID     string // 订阅ID
-	SessionID string // stripe的支付会话ID
-}
-
 type CreateSubResult struct {
 	SubID      string // 订阅ID
 	PayURL     string // 支付URL
 	CustomerID string // stripe侧用户ID
 	SessionID  string // stripe侧首次订阅支付ID
+}
+
+type QuerySubArgs struct {
+	SubID     string // 订阅ID
+	SessionID string // stripe的支付会话ID
 }
 
 type SubDetail struct {

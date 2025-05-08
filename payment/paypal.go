@@ -1,4 +1,4 @@
-package pay
+package payment
 
 import (
 	"context"
@@ -37,10 +37,6 @@ func newPaypalPay(options map[string]string) (*PaypalPay, error) {
 		return pay, err
 	}
 	return pay, nil
-}
-
-func (p *PaypalPay) GetChannel() string {
-	return ChannelPaypal
 }
 
 func (p *PaypalPay) Verify(ctx context.Context, args *VerifyArgs) (*VerifyRes, error) {

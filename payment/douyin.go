@@ -1,4 +1,4 @@
-package pay
+package payment
 
 import (
 	"bytes"
@@ -104,10 +104,6 @@ func newDouyinPay(options map[string]string) *DouyinPay {
 		cfg:     cfg,
 		options: options,
 	}
-}
-
-func (p *DouyinPay) GetChannel() string {
-	return ChannelDouyin
 }
 
 func (p *DouyinPay) Create(ctx context.Context, args *CreateArgs) (*CreateResult, error) {
