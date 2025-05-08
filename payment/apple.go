@@ -39,7 +39,7 @@ type ApplePay struct {
 }
 
 func NewApplePay() (*ApplePay, error) {
-	key, err := os.ReadFile("config/apple.p8")
+	key, err := os.ReadFile(config.GetString("pay.apple.key_path"))
 	if err != nil {
 		return nil, err
 	}
