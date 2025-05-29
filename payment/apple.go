@@ -48,6 +48,7 @@ func NewApplePay() (*ApplePay, error) {
 		KeyID:      config.GetString("pay.apple.key_id"),
 		BundleID:   config.GetString("pay.apple.bundle_id"),
 		Issuer:     config.GetString("pay.apple.issuer"),
+		Sandbox:    config.GetBool("pay.apple.sandbox"),
 	}
 	return &ApplePay{
 		apiClient:      api.NewStoreClient(cfg),
